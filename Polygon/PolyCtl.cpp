@@ -87,8 +87,10 @@ void CPolyCtl::CalcPoints(HDC hdc, const RECT& rc)
 	// The radius is the hypotenuse 
 	double  dblRadiusx = (rc.right - rc.left) / 2;
 	double  dblRadiusy = (rc.bottom - rc.top) / 2;
-	// angle is in radians, or radius lengths. 
-	double  dblAngle = 4 * pi / 2;          // Start at the top
+	// angle is in radians, or radius lengths. The Y coordinates
+	// are inverted on windows so top of circle is 3/2 PI instead
+	// of PI/2.
+	double  dblAngle = 3 * pi / 2;          // Start at the top
 	double  dblDiff = 2 * pi / m_nSides;   // Angle each side will make
 
 	ptCenter.x = (rc.left + rc.right) / 2;

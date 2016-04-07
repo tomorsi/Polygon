@@ -30,8 +30,8 @@ HRESULT CPolyCtl::OnDraw(ATL_DRAWINFO& di)
 	hBrush = CreateSolidBrush(colFore);
 	SelectObject(hdc, hBrush);
 
-	CalcPoints(hdc, rc);
-	// Polygon(hdc, &m_arrPoint[0], m_nSides);
+	CalcPoints(rc);
+	Polygon(hdc, &m_arrPolyPoint[0], m_nPolySides);
 
 	// Select back the old pen and brush and delete the brush we created
 	SelectObject(hdc, hOldPen);
@@ -48,7 +48,7 @@ HRESULT CPolyCtl::OnDraw(ATL_DRAWINFO& di)
 
 STDMETHODIMP CPolyCtl::get_Sides(SHORT* pVal)
 {
-	*pVal = m_nSides;
+	*pVal = m_nPolySides;
 
 	return S_OK;
 }
@@ -58,7 +58,7 @@ STDMETHODIMP CPolyCtl::put_Sides(SHORT newVal)
 {
 	if (2 < newVal && newVal < 101)
 	{
-		m_nSides = newVal;
+		m_nPolySides = newVal;
 
 		FireViewChange();
 
@@ -71,53 +71,61 @@ STDMETHODIMP CPolyCtl::put_Sides(SHORT newVal)
 }
 
 
-void CPolyCtl::DrawTriangle(HDC hdc, POINT radius, POINT opposite, POINT adjacent)
-{
-	POINT array[3];
-	array[0] = radius;
-	array[1] = opposite;
-	array[2] = adjacent;
-	Polygon(hdc, &array[0], 3);
-}
-
-void CPolyCtl::CalcPoints(HDC hdc, const RECT& rc)
+void CPolyCtl::CalcPoints(const RECT& rc)
 {
 	const double pi = 3.14159265358979;
-	POINT   ptCenter;
+	POINT   ptPolyCenter;
+	POINT   ptTriangleCenter;
+
 	// The radius is the hypotenuse 
-	double  dblRadiusx = (rc.right - rc.left) / 2;
+	double  dblRadiusx = (rc.right - rc.left) / 4;
 	double  dblRadiusy = (rc.bottom - rc.top) / 2;
+
 	// angle is in radians, or radius lengths. The Y coordinates
 	// are inverted on windows so top of circle is 3/2 PI instead
 	// of PI/2.
 	double  dblAngle = 3 * pi / 2;          // Start at the top
-	double  dblDiff = 2 * pi / m_nSides;   // Angle each side will make
+	double  dblDiff = 2 * pi / m_nPolySides;   // Angle each side will make
 
-	ptCenter.x = (rc.left + rc.right) / 2;
-	ptCenter.y = (rc.top + rc.bottom) / 2;
+	ptPolyCenter.x = (rc.left + rc.right) / 4;
+	ptPolyCenter.y = (rc.top + rc.bottom) / 2;
 
-	POINT radianStart[2];
-	radianStart[0].x = ptCenter.x;
-	radianStart[0].y = ptCenter.y;
-	radianStart[1].x = (long)(dblRadiusx * cos(0) + ptCenter.x + 0.5);
-	radianStart[1].y = (long)(dblRadiusy * sin(0) + ptCenter.y + 0.5);
+	ptTriangleCenter.x = (rc.left + rc.right) / 4 * 3;
+	ptTriangleCenter.y = (rc.top + rc.bottom) / 2;
 
-	Polyline(hdc, &radianStart[0], 2);
+	ATLTRACE(_T("Polygon Center(x:%d, y : %d)\n"),ptPolyCenter.x,ptPolyCenter.y);
+	ATLTRACE(_T("Triangle Center(x:%d, y : %d)\n"), ptTriangleCenter.x, ptTriangleCenter.y);
 
 	// Calculate the points for each side
 	int i = 0;
-	for (; i < m_nSides; i++)
+	for (; i < m_nPolySides; i++)
 	{
+	
+		m_arrPolyPoint[i].x = (long)(dblRadiusx * cos(dblAngle) + ptPolyCenter.x + 0.5);
+		m_arrPolyPoint[i].y = (long)(dblRadiusy * sin(dblAngle) + ptPolyCenter.y + 0.5);
+
+		// Center point is the same for each triangle.
+		m_arrTriangles[i].x = ptTriangleCenter.x;
+		m_arrTriangles[i].y = ptTriangleCenter.y;
+
+		// Second point in triangle
+		m_arrTriangles[i + 1].x = (long)(dblRadiusx * cos(dblAngle) + ptTriangleCenter.x + 0.5);
+		m_arrTriangles[i + 1].y = (long)(dblRadiusy * sin(dblAngle) + ptTriangleCenter.y + 0.5);
+
 		// When executing in the Visual C++ Debugger the output isn't directed to DebugView.
-		ATLTRACE(_T("Angle in radians: %f\n"), dblAngle);
-
-		m_arrPoint[i].x = (long)(dblRadiusx * cos(dblAngle) + ptCenter.x + 0.5);
-		m_arrPoint[i].y = (long)(dblRadiusy * sin(dblAngle) + ptCenter.y + 0.5);
-
-		if ( i > 0)
-			DrawTriangle(hdc, ptCenter, m_arrPoint[i-1], m_arrPoint[i]);
+		ATLTRACE(_T("X: %d Y: %d Angle in radians: %f\n"), m_arrPolyPoint[i].x, m_arrPolyPoint[i].y, dblAngle);
 
 		dblAngle += dblDiff;
+
+		// Third point in triangle.
+		 = (long)(dblRadiusx * cos(dblAngle) + ptTriangleCenter.x + 0.5);
+		m_arrTriangles[i + 2].y = (long)(dblRadiusy * sin(dblAngle) + ptTriangleCenter.y + 0.5);
+
+		ATLTRACE(_T("Triangle Coordinates (%d,%d) (%d,%d) (%d,%d)\n"), 
+			m_arrTriangles[i].x, m_arrTriangles[i].y,
+			m_arrTriangles[i + 1].x, m_arrTriangles[i + 1].y,
+			m_arrTriangles[i + 2].x, m_arrTriangles[i + 2].y);
+
+		
 	}
-	DrawTriangle(hdc, ptCenter, m_arrPoint[i-1], m_arrPoint[0]);
 }

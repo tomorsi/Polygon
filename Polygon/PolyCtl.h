@@ -40,7 +40,7 @@ public:
 
 
 	CPolyCtl()
-		:m_nSides(3), m_clrFillColor(RGB(0, 0xFF, 0))
+		:m_nPolySides(3), m_clrFillColor(RGB(0, 0xFF, 0))
 	{
 	}
 
@@ -122,12 +122,20 @@ END_MSG_MAP()
 // IPolyCtl
 public:
 	HRESULT CPolyCtl::OnDraw(ATL_DRAWINFO& di);
-	void CalcPoints(HDC hdc, const RECT& rc);
-	void DrawTriangle(HDC hdc, POINT radius, POINT opposite, POINT adjacent);
-
+	void CalcPoints(const RECT& rc);
+	
 	OLE_COLOR m_clrFillColor;
-	short m_nSides;
-	POINT m_arrPoint[100];
+
+	short m_nPolySides;
+	// This is the coordinates for the manually drawn the polygon.
+	POINT m_arrPolyPoint[100];
+
+	// This is the information coordinates, counts for the right triangles.
+	POINT m_arrTriangles[100];
+	INT m_nTrianglePoints[300];
+	int m_nTriangles;
+
+	const SIZEL s_initialSize = { 400, 200 };
 
 	void OnFillColorChanged()
 	{
@@ -136,8 +144,17 @@ public:
 
 	DECLARE_PROTECT_FINAL_CONSTRUCT()
 
+
+	// Create two polygons size by size, the first is the actual polygon
+	// rendering the second renders the right triangles used to create the polygon. 
 	HRESULT FinalConstruct()
 	{
+		// Set the initial size
+		AtlPixelToHiMetric(&s_initialSize, &m_sizeExtent);
+		
+		// Make sure the natural extent is the correct size too
+		m_sizeNatural = m_sizeExtent;
+
 		return S_OK;
 	}
 

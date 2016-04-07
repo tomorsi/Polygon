@@ -3,7 +3,7 @@
 #include "PolyCtl.h"
 
 
-// CPolyCtl
+// CPolyCtl, OnDraw
 HRESULT CPolyCtl::OnDraw(ATL_DRAWINFO& di)
 {
 	RECT& rc = *(RECT*)di.prcBounds;

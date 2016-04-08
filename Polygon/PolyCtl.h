@@ -121,6 +121,9 @@ END_MSG_MAP()
 
 // IPolyCtl
 public:
+
+	void DrawRightAngleGlyphs(HDC hdc);
+
 	HRESULT CPolyCtl::OnDraw(ATL_DRAWINFO& di);
 	void CalcPoints(const RECT& rc);
 	
@@ -131,8 +134,8 @@ public:
 	POINT m_arrPolyPoint[100];
 
 	// This is the information coordinates, counts for the right triangles.
-	POINT m_arrTriangles[100];
-	INT m_nTrianglePoints[300];
+	POINT m_arrTriangles[300];
+	INT m_nTrianglePoints[100];
 	int m_nTriangles;
 
 	const SIZEL s_initialSize = { 400, 200 };

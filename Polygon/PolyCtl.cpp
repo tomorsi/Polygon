@@ -2,6 +2,38 @@
 #include "stdafx.h"
 #include "PolyCtl.h"
 
+void CPolyCtl::DrawRightAngleGlyphs(HDC hdc)
+{
+
+	for (int i = 0; i < m_nTriangles * 3; i+=3)
+	{
+		double xslope =(float)(m_arrTriangles[i].x - m_arrTriangles[i + 2].x) / (float)(m_arrTriangles[i].y - m_arrTriangles[i + 2].y);
+		int xsize = (int)round(xslope * 15.0);
+
+		double yslope = (float)(m_arrTriangles[i].y - m_arrTriangles[i + 2].y) / (float)(m_arrTriangles[i].x - m_arrTriangles[i + 2].x);
+		int ysize = (int)round(yslope * 15.0);
+
+		// Determine how to best display the glyph. 
+
+		
+	}
+
+
+}
+
+static POINT DistanceFromPoint(int x1, int y1, int x2, int y2, int n)
+{
+	POINT a;
+
+	int d = sqrt((x2 - x1) ^ 2 + (y2 - y1) ^ 2);
+	int r = n / d;
+
+	a.x = r * x2 + (1 - r) * x1;
+	a.y = r * y2 + (1 - r) * y1; 
+
+	return a;
+}
+
 
 // CPolyCtl, OnDraw
 HRESULT CPolyCtl::OnDraw(ATL_DRAWINFO& di)
@@ -24,7 +56,8 @@ HRESULT CPolyCtl::OnDraw(ATL_DRAWINFO& di)
 	hBrush = (HBRUSH)GetStockObject(WHITE_BRUSH);
 	hOldBrush = (HBRUSH)SelectObject(hdc, hBrush);
 
-	Ellipse(hdc, rc.left, rc.top, rc.right, rc.bottom);
+	Ellipse(hdc, rc.left, rc.top, rc.right/2, rc.bottom);
+	Ellipse(hdc, rc.left + (rc.right / 2), rc.top, rc.right, rc.bottom);
 
 	// Create and select the brush that will be used to fill the polygon
 	hBrush = CreateSolidBrush(colFore);
@@ -36,14 +69,15 @@ HRESULT CPolyCtl::OnDraw(ATL_DRAWINFO& di)
 	// Select back the old pen and brush and delete the brush we created
 	SelectObject(hdc, hOldPen);
 	SelectObject(hdc, hOldBrush);
-
-
 	DeleteObject(hBrush);
 
-
+	PolyPolygon(hdc, &m_arrTriangles[0], &m_nTrianglePoints[0], m_nTriangles);
+	// Create the right angle glyphs. 
+	DrawRightAngleGlyphs(hdc);
 
 	return S_OK;
 }
+
 
 
 STDMETHODIMP CPolyCtl::get_Sides(SHORT* pVal)
@@ -98,6 +132,9 @@ void CPolyCtl::CalcPoints(const RECT& rc)
 
 	// Calculate the points for each side
 	int i = 0;
+	m_nTriangles = 0;
+	int idxTrianglePts = 0;
+
 	for (; i < m_nPolySides; i++)
 	{
 	
@@ -105,12 +142,12 @@ void CPolyCtl::CalcPoints(const RECT& rc)
 		m_arrPolyPoint[i].y = (long)(dblRadiusy * sin(dblAngle) + ptPolyCenter.y + 0.5);
 
 		// Center point is the same for each triangle.
-		m_arrTriangles[i].x = ptTriangleCenter.x;
-		m_arrTriangles[i].y = ptTriangleCenter.y;
+		m_arrTriangles[idxTrianglePts].x = ptTriangleCenter.x;
+		m_arrTriangles[idxTrianglePts].y = ptTriangleCenter.y;
 
 		// Second point in triangle
-		m_arrTriangles[i + 1].x = (long)(dblRadiusx * cos(dblAngle) + ptTriangleCenter.x + 0.5);
-		m_arrTriangles[i + 1].y = (long)(dblRadiusy * sin(dblAngle) + ptTriangleCenter.y + 0.5);
+		m_arrTriangles[idxTrianglePts + 1].x = (long)(dblRadiusx * cos(dblAngle) + ptTriangleCenter.x + 0.5);
+		m_arrTriangles[idxTrianglePts + 1].y = (long)(dblRadiusy * sin(dblAngle) + ptTriangleCenter.y + 0.5);
 
 		// When executing in the Visual C++ Debugger the output isn't directed to DebugView.
 		ATLTRACE(_T("X: %d Y: %d Angle in radians: %f\n"), m_arrPolyPoint[i].x, m_arrPolyPoint[i].y, dblAngle);
@@ -118,14 +155,22 @@ void CPolyCtl::CalcPoints(const RECT& rc)
 		dblAngle += dblDiff;
 
 		// Third point in triangle.
-		 = (long)(dblRadiusx * cos(dblAngle) + ptTriangleCenter.x + 0.5);
-		m_arrTriangles[i + 2].y = (long)(dblRadiusy * sin(dblAngle) + ptTriangleCenter.y + 0.5);
+		POINT temp;
+		temp.x = (long)(dblRadiusx*cos(dblAngle) + ptTriangleCenter.x + 0.5);
+		temp.y = (long)(dblRadiusy*sin(dblAngle) + ptTriangleCenter.y + 0.5);
 
-		ATLTRACE(_T("Triangle Coordinates (%d,%d) (%d,%d) (%d,%d)\n"), 
-			m_arrTriangles[i].x, m_arrTriangles[i].y,
-			m_arrTriangles[i + 1].x, m_arrTriangles[i + 1].y,
-			m_arrTriangles[i + 2].x, m_arrTriangles[i + 2].y);
+		m_arrTriangles[idxTrianglePts + 2].x = m_arrTriangles[idxTrianglePts + 1].x + (temp.x - m_arrTriangles[idxTrianglePts + 1].x) / 2;
+		m_arrTriangles[idxTrianglePts + 2].y = m_arrTriangles[idxTrianglePts + 1].y + (temp.y - m_arrTriangles[idxTrianglePts + 1].y) / 2;
 
-		
+		m_nTriangles++;
+		m_nTrianglePoints[i] = 3;
+
+		ATLTRACE(_T("Triangle (%d,%d) (%d,%d) (%d,%d)\n"), 
+			m_arrTriangles[idxTrianglePts].x, m_arrTriangles[idxTrianglePts].y,
+			m_arrTriangles[idxTrianglePts + 1].x, m_arrTriangles[idxTrianglePts + 1].y,
+			m_arrTriangles[idxTrianglePts + 2].x, m_arrTriangles[idxTrianglePts + 2].y);
+
+
+		idxTrianglePts = idxTrianglePts + m_nTrianglePoints[i];
 	}
 }

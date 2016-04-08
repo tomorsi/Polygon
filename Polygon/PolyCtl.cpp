@@ -2,37 +2,55 @@
 #include "stdafx.h"
 #include "PolyCtl.h"
 
-void CPolyCtl::DrawRightAngleGlyphs(HDC hdc)
-{
 
-	for (int i = 0; i < m_nTriangles * 3; i+=3)
-	{
-		double xslope =(float)(m_arrTriangles[i].x - m_arrTriangles[i + 2].x) / (float)(m_arrTriangles[i].y - m_arrTriangles[i + 2].y);
-		int xsize = (int)round(xslope * 15.0);
-
-		double yslope = (float)(m_arrTriangles[i].y - m_arrTriangles[i + 2].y) / (float)(m_arrTriangles[i].x - m_arrTriangles[i + 2].x);
-		int ysize = (int)round(yslope * 15.0);
-
-		// Determine how to best display the glyph. 
-
-		
-	}
-
-
-}
-
-static POINT DistanceFromPoint(int x1, int y1, int x2, int y2, int n)
+static POINT DistanceFromPoint(int x1, int y1, int x2, int y2, int distance)
 {
 	POINT a;
 
-	int d = sqrt((x2 - x1) ^ 2 + (y2 - y1) ^ 2);
-	int r = n / d;
+	//calculate a point on the line x1-y1 to x2-y2 that is distance from x2-y2
+	double vx = x2 - x1; // x vector
+	double vy = y2 - y1; // y vector
 
-	a.x = r * x2 + (1 - r) * x1;
-	a.y = r * y2 + (1 - r) * y1; 
+	double mag = sqrt(vx*vx + vy*vy); // length
+
+	vx /= mag;
+	vy /= mag;
+
+	// calculate the new vector, which is x2y2 + vxvy * (mag + distance).
+
+	a.x = (int)((double)x2 + vx * (mag + (double)distance));
+	a.y = (int)((double)y2 + vy * (mag + (double)distance));
 
 	return a;
 }
+
+void CPolyCtl::DrawRightAngleGlyphs(HDC hdc)
+{
+
+	for (int i = 0; i < (m_nTriangles*3); i+=3)
+	{
+		double hypoSlopeDen = (double)m_arrTriangles[i].y - (double)m_arrTriangles[i + 1].y;
+		double hypoSlopeNum = (double)m_arrTriangles[i].x - (double)m_arrTriangles[i + 1].x;
+		double hypoSlope = 0;
+		if (hypoSlopeDen != 0.0)
+		{
+			hypoSlope = (float)(m_arrTriangles[i].x - m_arrTriangles[i + 1].x) / (float)(m_arrTriangles[i].y - m_arrTriangles[i + 1].y);
+		}
+		else
+		{
+		}
+
+		POINT oppPoint = DistanceFromPoint(m_arrTriangles[i + 1].x, m_arrTriangles[i + 1].y,
+			m_arrTriangles[i + 2].x, m_arrTriangles[i + 2].y,10);
+		POINT adjPoint = DistanceFromPoint(m_arrTriangles[i].x, m_arrTriangles[i].y,
+			m_arrTriangles[i + 2].x, m_arrTriangles[i + 2].y, 10);
+	
+		ATLTRACE(_T("opp. point: (%d,%d) adj. point: (%d,%d)\n"), oppPoint.x, oppPoint.y, adjPoint.x, adjPoint.y);
+		ATLTRACE(_T("Hypotonue Slope: %f %f/%f\n"), hypoSlope, hypoSlopeNum, hypoSlopeDen);
+	}
+
+}
+
 
 
 // CPolyCtl, OnDraw

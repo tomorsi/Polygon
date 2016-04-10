@@ -6,11 +6,11 @@
 // Factor in Center of circle offset using the the data member. 
 // http://stackoverflow.com/questions/1800138/given-a-start-and-end-point-and-a-distance-calculate-a-point-along-a-line,
 // which has an incorrect formula, a comment has been added to reflect the correct computation. 
-POINT CPolyCtl::DistanceFromPoint(int x1, int y1, int x2, int y2, int distance)
+POINT CPolyCtl::DistanceFromPoint(int x1, int y1, int x2, int y2, double distance)
 {
 	POINT a;
 
-	double extend = distance / cos(45);
+	double extend = distance;
 
 	//calculate a point on the line x1-y1 to x2-y2 that is distance from x2-y2
 	double vx = x2 - x1; // x vector
@@ -36,28 +36,32 @@ void CPolyCtl::DrawRightAngleGlyphs(HDC hdc)
 
 	for (int i = 0; i < (m_nTriangles*3); i+=3)
 	{
-		double hypoSlopeDen = (double)m_arrTriangles[i].y - (double)m_arrTriangles[i + 1].y;
-		double hypoSlopeNum = (double)m_arrTriangles[i].x - (double)m_arrTriangles[i + 1].x;
-		double hypoSlope = 0;
-		if (hypoSlopeDen != 0.0)
-		{
-			hypoSlope = (float)(m_arrTriangles[i].x - m_arrTriangles[i + 1].x) / (float)(m_arrTriangles[i].y - m_arrTriangles[i + 1].y);
-		}
-		else
-		{
-		}
-
 		POINT oppPoint = DistanceFromPoint(m_arrTriangles[i + 2].x, m_arrTriangles[i + 2].y,
-			m_arrTriangles[i + 1].x, m_arrTriangles[i + 1].y, 10);
+			m_arrTriangles[i + 1].x, m_arrTriangles[i + 1].y, 10.0);
 		POINT adjPoint = DistanceFromPoint(m_arrTriangles[i + 2].x, m_arrTriangles[i + 2].y,
-			m_arrTriangles[i].x, m_arrTriangles[i].y, 10);
+			m_arrTriangles[i].x, m_arrTriangles[i].y, 10.0);
+
+		POINT oppMidPoint = DistanceFromPoint(m_arrTriangles[i + 2].x, m_arrTriangles[i + 2].y,
+			m_arrTriangles[i + 1].x, m_arrTriangles[i + 1].y, 10.0 / cos(45));
+		POINT adjMidPoint = DistanceFromPoint(m_arrTriangles[i + 2].x, m_arrTriangles[i + 2].y,
+			m_arrTriangles[i].x, m_arrTriangles[i].y, 10.0 / cos(45));
+
+		POINT midPoint;
+		midPoint.x = adjMidPoint.x + (oppMidPoint.x - adjMidPoint.x) / 2;
+		midPoint.y = adjMidPoint.y + (oppMidPoint.y - adjMidPoint.y) / 2;
 	
 		ATLTRACE(_T("opp. point: (%d,%d) adj. point: (%d,%d)\n"), oppPoint.x, oppPoint.y, adjPoint.x, adjPoint.y);
-		// ATLTRACE(_T("Hypotonue Slope: %f %f/%f\n"), hypoSlope, hypoSlopeNum, hypoSlopeDen);
+		
+		MoveToEx(hdc, oppPoint.x, oppPoint.y, NULL);
+		LineTo(hdc, midPoint.x, midPoint.y);
 
-		const int factor = 5;
-		Ellipse(hdc, oppPoint.x - factor, oppPoint.y - factor, oppPoint.x + factor, oppPoint.y + factor); 
-		Ellipse(hdc, adjPoint.x - factor, adjPoint.y - factor, adjPoint.x + factor, adjPoint.y + factor);
+		MoveToEx(hdc, adjPoint.x, adjPoint.y, NULL);
+		LineTo(hdc, midPoint.x, midPoint.y);
+
+		//const int factor = 1;
+		//Ellipse(hdc, oppPoint.x - factor, oppPoint.y - factor, oppPoint.x + factor, oppPoint.y + factor); 
+		//Ellipse(hdc, adjPoint.x - factor, adjPoint.y - factor, adjPoint.x + factor, adjPoint.y + factor);
+		//Ellipse(hdc, midPoint.x - factor, midPoint.y - factor, midPoint.x + factor, midPoint.y + factor);
 
 	}
 

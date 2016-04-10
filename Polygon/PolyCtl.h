@@ -121,7 +121,7 @@ END_MSG_MAP()
 
 // IPolyCtl
 public:
-	POINT DistanceFromPoint(int x1, int y1, int x2, int y2, int distance);
+	POINT DistanceFromPoint(int x1, int y1, int x2, int y2, double distance);
 	void DrawRightAngleGlyphs(HDC hdc);
 
 	HRESULT CPolyCtl::OnDraw(ATL_DRAWINFO& di);
@@ -139,7 +139,7 @@ public:
 	INT m_nTrianglePoints[100];
 	int m_nTriangles;
 
-	const SIZEL s_initialSize = { 400, 200 };
+	const SIZEL s_initialSize = { 800, 400 };
 
 	void OnFillColorChanged()
 	{

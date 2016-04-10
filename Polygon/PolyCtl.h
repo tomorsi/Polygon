@@ -121,7 +121,7 @@ END_MSG_MAP()
 
 // IPolyCtl
 public:
-
+	POINT DistanceFromPoint(int x1, int y1, int x2, int y2, int distance);
 	void DrawRightAngleGlyphs(HDC hdc);
 
 	HRESULT CPolyCtl::OnDraw(ATL_DRAWINFO& di);
@@ -134,6 +134,7 @@ public:
 	POINT m_arrPolyPoint[100];
 
 	// This is the information coordinates, counts for the right triangles.
+	POINT m_triangleCenter;
 	POINT m_arrTriangles[300];
 	INT m_nTrianglePoints[100];
 	int m_nTriangles;

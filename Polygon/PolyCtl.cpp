@@ -3,23 +3,30 @@
 #include "PolyCtl.h"
 
 
-static POINT DistanceFromPoint(int x1, int y1, int x2, int y2, int distance)
+// Factor in Center of circle offset using the the data member. 
+// http://stackoverflow.com/questions/1800138/given-a-start-and-end-point-and-a-distance-calculate-a-point-along-a-line,
+// which has an incorrect formula, a comment has been added to reflect the correct computation. 
+POINT CPolyCtl::DistanceFromPoint(int x1, int y1, int x2, int y2, int distance)
 {
 	POINT a;
+
+	double extend = distance / cos(45);
 
 	//calculate a point on the line x1-y1 to x2-y2 that is distance from x2-y2
 	double vx = x2 - x1; // x vector
 	double vy = y2 - y1; // y vector
 
-	double mag = sqrt(vx*vx + vy*vy); // length
+	double mag = sqrt((vx*vx) + (vy*vy)); // length
 
 	vx /= mag;
 	vy /= mag;
 
 	// calculate the new vector, which is x2y2 + vxvy * (mag + distance).
+	double vxx = vx * (double)extend;
+	a.x = (double)x1 + vxx;
 
-	a.x = (int)((double)x2 + vx * (mag + (double)distance));
-	a.y = (int)((double)y2 + vy * (mag + (double)distance));
+	double vyy = vy * (double)extend;
+	a.y = (double)y1 + vyy;
 
 	return a;
 }
@@ -40,13 +47,18 @@ void CPolyCtl::DrawRightAngleGlyphs(HDC hdc)
 		{
 		}
 
-		POINT oppPoint = DistanceFromPoint(m_arrTriangles[i + 1].x, m_arrTriangles[i + 1].y,
-			m_arrTriangles[i + 2].x, m_arrTriangles[i + 2].y,10);
-		POINT adjPoint = DistanceFromPoint(m_arrTriangles[i].x, m_arrTriangles[i].y,
-			m_arrTriangles[i + 2].x, m_arrTriangles[i + 2].y, 10);
+		POINT oppPoint = DistanceFromPoint(m_arrTriangles[i + 2].x, m_arrTriangles[i + 2].y,
+			m_arrTriangles[i + 1].x, m_arrTriangles[i + 1].y, 10);
+		POINT adjPoint = DistanceFromPoint(m_arrTriangles[i + 2].x, m_arrTriangles[i + 2].y,
+			m_arrTriangles[i].x, m_arrTriangles[i].y, 10);
 	
 		ATLTRACE(_T("opp. point: (%d,%d) adj. point: (%d,%d)\n"), oppPoint.x, oppPoint.y, adjPoint.x, adjPoint.y);
-		ATLTRACE(_T("Hypotonue Slope: %f %f/%f\n"), hypoSlope, hypoSlopeNum, hypoSlopeDen);
+		// ATLTRACE(_T("Hypotonue Slope: %f %f/%f\n"), hypoSlope, hypoSlopeNum, hypoSlopeDen);
+
+		const int factor = 5;
+		Ellipse(hdc, oppPoint.x - factor, oppPoint.y - factor, oppPoint.x + factor, oppPoint.y + factor); 
+		Ellipse(hdc, adjPoint.x - factor, adjPoint.y - factor, adjPoint.x + factor, adjPoint.y + factor);
+
 	}
 
 }
@@ -127,7 +139,7 @@ void CPolyCtl::CalcPoints(const RECT& rc)
 {
 	const double pi = 3.14159265358979;
 	POINT   ptPolyCenter;
-	POINT   ptTriangleCenter;
+	
 
 	// The radius is the hypotenuse 
 	double  dblRadiusx = (rc.right - rc.left) / 4;
@@ -142,11 +154,11 @@ void CPolyCtl::CalcPoints(const RECT& rc)
 	ptPolyCenter.x = (rc.left + rc.right) / 4;
 	ptPolyCenter.y = (rc.top + rc.bottom) / 2;
 
-	ptTriangleCenter.x = (rc.left + rc.right) / 4 * 3;
-	ptTriangleCenter.y = (rc.top + rc.bottom) / 2;
+	m_triangleCenter.x = (rc.left + rc.right) / 4 * 3;
+	m_triangleCenter.y = (rc.top + rc.bottom) / 2;
 
-	ATLTRACE(_T("Polygon Center(x:%d, y : %d)\n"),ptPolyCenter.x,ptPolyCenter.y);
-	ATLTRACE(_T("Triangle Center(x:%d, y : %d)\n"), ptTriangleCenter.x, ptTriangleCenter.y);
+	// ATLTRACE(_T("Polygon Center(x:%d, y : %d)\n"),ptPolyCenter.x,ptPolyCenter.y);
+	// ATLTRACE(_T("Triangle Center(x:%d, y : %d)\n"), ptTriangleCenter.x, ptTriangleCenter.y);
 
 	// Calculate the points for each side
 	int i = 0;
@@ -160,22 +172,22 @@ void CPolyCtl::CalcPoints(const RECT& rc)
 		m_arrPolyPoint[i].y = (long)(dblRadiusy * sin(dblAngle) + ptPolyCenter.y + 0.5);
 
 		// Center point is the same for each triangle.
-		m_arrTriangles[idxTrianglePts].x = ptTriangleCenter.x;
-		m_arrTriangles[idxTrianglePts].y = ptTriangleCenter.y;
+		m_arrTriangles[idxTrianglePts].x = m_triangleCenter.x;
+		m_arrTriangles[idxTrianglePts].y = m_triangleCenter.y;
 
 		// Second point in triangle
-		m_arrTriangles[idxTrianglePts + 1].x = (long)(dblRadiusx * cos(dblAngle) + ptTriangleCenter.x + 0.5);
-		m_arrTriangles[idxTrianglePts + 1].y = (long)(dblRadiusy * sin(dblAngle) + ptTriangleCenter.y + 0.5);
+		m_arrTriangles[idxTrianglePts + 1].x = (long)(dblRadiusx * cos(dblAngle) + m_triangleCenter.x + 0.5);
+		m_arrTriangles[idxTrianglePts + 1].y = (long)(dblRadiusy * sin(dblAngle) + m_triangleCenter.y + 0.5);
 
 		// When executing in the Visual C++ Debugger the output isn't directed to DebugView.
-		ATLTRACE(_T("X: %d Y: %d Angle in radians: %f\n"), m_arrPolyPoint[i].x, m_arrPolyPoint[i].y, dblAngle);
+		// ATLTRACE(_T("X: %d Y: %d Angle in radians: %f\n"), m_arrPolyPoint[i].x, m_arrPolyPoint[i].y, dblAngle);
 
 		dblAngle += dblDiff;
 
 		// Third point in triangle.
 		POINT temp;
-		temp.x = (long)(dblRadiusx*cos(dblAngle) + ptTriangleCenter.x + 0.5);
-		temp.y = (long)(dblRadiusy*sin(dblAngle) + ptTriangleCenter.y + 0.5);
+		temp.x = (long)(dblRadiusx*cos(dblAngle) + m_triangleCenter.x + 0.5);
+		temp.y = (long)(dblRadiusy*sin(dblAngle) + m_triangleCenter.y + 0.5);
 
 		m_arrTriangles[idxTrianglePts + 2].x = m_arrTriangles[idxTrianglePts + 1].x + (temp.x - m_arrTriangles[idxTrianglePts + 1].x) / 2;
 		m_arrTriangles[idxTrianglePts + 2].y = m_arrTriangles[idxTrianglePts + 1].y + (temp.y - m_arrTriangles[idxTrianglePts + 1].y) / 2;
